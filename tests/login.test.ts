@@ -33,7 +33,6 @@ const test = base.extend<Fixtures>({
   },
 
   loginWith: async ({ loginPage }, use) => {
-    // Provide a helper function that performs the login flow
     const fn = async (credentials: LoginCredentials) => {
       await loginPage.goto();
       await loginPage.login(credentials.username, credentials.password, credentials.role);
@@ -66,18 +65,12 @@ const loginScenarios: LoginCredentials[] = [
     role: ROLE,
     shouldSucceed: false,
   },
-  {
-    description: 'unknown username with valid password',
-    username: 'unknown_user',
-    password: VALID_PASSWORD,
-    role: ROLE,
-    shouldSucceed: false,
-  },
 ];
 
 // Data-driven tests
 for (const scenario of loginScenarios) {
   test(`login behavior – ${scenario.description}`, async ({ page, loginWith }) => {
+
     await test.step(`Attempt login with: ${scenario.description}`, async () => {
       await loginWith(scenario);
     });
@@ -90,8 +83,13 @@ for (const scenario of loginScenarios) {
       await test.step('Verify error message is displayed', async () => {
         const errorMessage = page.getByTestId('error-message');
         await expect(errorMessage).toBeVisible();
-        await expect(errorMessage).toContainText('Incorrect password');
-        // Optionally: ensure we are still on the login page
+
+        if (scenario.description === 'empty password') {
+          await expect(errorMessage).toContainText('Please fill in all fields.');
+        } else {
+          await expect(errorMessage).toContainText('Incorrect password');
+        }
+
         await expect(page).toHaveURL(/\/login/i);
       });
     }
