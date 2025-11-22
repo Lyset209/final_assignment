@@ -78,7 +78,7 @@ for (const { id, name, quantity } of productTestCases) {
     });
 
     // --- 4. Kontroll: VAT = 20% av totalSum 
-    // Rimligt! Alla kunder på The Hoff Store kommer från Armenien och Bulgarien där 20% moms är standard.
+    // Rimligt! Alla kunder på The Hoff Store kommer från Armenien eller Bulgarien där 20% moms är standard.
     // https://www.globalvatcompliance.com/globalvatnews/world-countries-vat-rates-2020/
     await test.step('Verifiera att totalVAT ≈ 20% av totalSum', async () => {
       const expectedVAT = totalSum * VAT_RATE;
@@ -98,3 +98,33 @@ for (const { id, name, quantity } of productTestCases) {
     });
   });
 }
+
+// --- Tillgänglighet: Kompatibilitet med hjälpmedel ---
+test('Kompatibilitet med hjälpmedel – struktur och kontroller är anpassade för skärmläsare', async ({ page, store2Page }) => {
+  await test.step('Sidan är laddad och huvudinnehåll kan hittas', async () => {
+    await expect(page).toHaveURL(/store2/i);
+
+    // Main-landmärke (antingen <main> eller role="main")
+    const mainRegion = page.getByRole('main');
+    await expect(mainRegion, 'Det bör finnas ett main-landmärke för huvudinnehållet').toBeVisible();
+
+    // Minst en huvudrubrik (h1)
+    const h1 = page.getByRole('heading', { level: 1 });
+    await expect(h1, 'Sidan bör ha en tydlig huvudrubrik (h1)').toBeVisible();
+  });
+
+  await test.step('Formulärets kontroller är synliga, fokusbara och rimligt märkta', async () => {
+    // Produktväljare
+    await expect(store2Page.productSelect, 'Produktväljaren ska vara synlig').toBeVisible();
+    await expect(store2Page.productSelect, 'Produktväljaren ska gå att interagera med').toBeEnabled();
+
+    // Amount-fält
+    await expect(store2Page.amountInput, 'Amount-fältet ska vara synligt').toBeVisible();
+    await expect(store2Page.amountInput, 'Amount-fältet ska gå att interagera med').toBeEnabled();
+
+    // Add to cart-knappen
+    await expect(store2Page.addToCartButton, '"Add to cart"-knappen ska vara synlig').toBeVisible();
+    await expect(store2Page.addToCartButton, '"Add to cart"-knappen ska gå att interagera med').toBeEnabled();
+    await expect(store2Page.addToCartButton, '"Add to cart"-knappen ska exponeras som en knapp').toHaveRole('button');
+  });
+});
