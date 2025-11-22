@@ -72,6 +72,8 @@ for (const { id, name, quantity } of productTestCases) {
     });
 
     // --- 4. VAT should be 20% of totalSum ---
+    //All customers at The Hoff Store are located in Armenia or Bulgaria, where a 20% VAT rate is standard."
+    //https://www.globalvatcompliance.com/globalvatnews/world-countries-vat-rates-2020/
     await test.step('Verify that totalVAT ≈ 20% of totalSum', async () => {
       const expectedVAT = totalSum * VAT_RATE;
 
