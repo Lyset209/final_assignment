@@ -1,10 +1,10 @@
 import { Page, Locator } from '@playwright/test';
 
 /**
- * Page Object Model for the /store2/ page.
+ * Page Object Model for the store page.
  * Encapsulates all interaction with the product table, cart, and total values.
  */
-export class Store2Page {
+export class StorePage {
   readonly page: Page;
 
   // Locators for form interaction
@@ -42,7 +42,7 @@ export class Store2Page {
   }
 
   /**
-   * Navigates to the Store2 page.
+   * Navigates to the Store page.
    * Useful if login does not automatically redirect.
    */
   async goto(): Promise<void> {

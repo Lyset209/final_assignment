@@ -1,6 +1,6 @@
 import { APIRequestContext, expect } from '@playwright/test';
 
-export class Store2Api {
+export class StoreApi {
   // APIRequestContext is used to perform HTTP requests
   private readonly request: APIRequestContext;
 
