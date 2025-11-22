@@ -1,7 +1,7 @@
 import { test as base, expect } from '@playwright/test';
 import { LoginPage } from '../../pages/loginPage';
 import { STORE_PASSWORD } from '../config/env';
-import { LOGIN_USER } from '../config/testData';
+import { TEST_USER } from '../config/testData';
 
 // Fixture type: exposes a LoginPage instance to the tests
 type Fixtures = {
@@ -21,7 +21,7 @@ test('user can log in successfully', async ({ page, loginPage }) => {
   await loginPage.goto(); // Navigate to the login page
 
   // Perform login using valid credentials from shared test data
-  await loginPage.login(LOGIN_USER.username, STORE_PASSWORD, LOGIN_USER.role);
+  await loginPage.login(TEST_USER.username, STORE_PASSWORD, TEST_USER.role);
 
   // Verify successful navigation to the store page
   await expect(page).toHaveURL(/\/store/i);
@@ -32,7 +32,7 @@ test('invalid credentials show error', async ({ page, loginPage }) => {
   await loginPage.goto(); // Load login view
 
   // Attempt login with a wrong password
-  await loginPage.login(LOGIN_USER.username, 'wrong_password', LOGIN_USER.role);
+  await loginPage.login(TEST_USER.username, 'wrong_password', TEST_USER.role);
 
   // Validate that an error message is shown
   const error = page.getByTestId('error-message');

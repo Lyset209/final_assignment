@@ -1,11 +1,5 @@
-// Default store user used in UI tests that require login
-export const STORE_USER = {
-  username: 'Johan',
-  role: 'consumer',
-};
-
-// User credentials specifically for login-focused tests
-export const LOGIN_USER = {
+// Default test user
+export const TEST_USER = {
   username: 'Johan',
   role: 'consumer',
 };
