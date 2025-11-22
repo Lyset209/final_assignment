@@ -2,13 +2,13 @@ import { test as base, expect } from '@playwright/test';
 import { LoginPage } from '../pages/loginPage';
 import { Store2Page } from '../pages/store2Page';
 
-// Testdata / konstanter
+// Test data / constants
 const USERNAME = 'markus';
 const PASSWORD = 'sup3rs3cr3t';
 const ROLE = 'consumer';
 const VAT_RATE = 0.2;
 
-// Data-drivna produkt-case
+// Data-driven product cases
 const productTestCases = [
   {
     id: '10',
@@ -17,113 +17,113 @@ const productTestCases = [
   },
 ];
 
-// Typ för fixtures
+// Type for fixtures
 type Fixtures = {
   store2Page: Store2Page;
 };
 
-// Förläng Playwrights `test` med en fixture som loggar in och skapar Store2Page
+// Extend Playwright’s `test` with a fixture that logs in and creates Store2Page
 const test = base.extend<Fixtures>({
   store2Page: async ({ page }, use) => {
     const loginPage = new LoginPage(page);
 
-    // Logga in en gång per test via fixture
+    // Log in once per test through the fixture
     await loginPage.goto();
     await loginPage.login(USERNAME, PASSWORD, ROLE);
 
-    // Om appen redirectar till store2 efter login kan vi verifiera det:
+    // Verify that the app redirects to /store2 after login
     await expect(page).toHaveURL(/store2/i);
 
     const store2Page = new Store2Page(page);
 
-    // Om den INTE redirectar automatiskt kan du istället:
-    // await store2Page.goto();
-
-    // Gör Store2Page tillgänglig i testet
+    // Make Store2Page available inside the test
     await use(store2Page);
   },
 });
 
 const expectEx = expect;
 
-// Data-drivet test: kör samma logik för varje produkt i productTestCases
+// Data-driven test: runs the same logic for each product in productTestCases
 for (const { id, name, quantity } of productTestCases) {
-  test(`consumer kan lägga till ${name} och grandTotal är korrekt + priset matchar tabellen`, async ({
-    page,
+  test(`consumer can add ${name} and grandTotal is correct + price matches table`, async ({
     store2Page,
   }) => {
-    // --- 1. Lägg till produkt i kundvagnen ---
-    await test.step(`Lägg till ${quantity} st ${name} i kundvagnen`, async () => {
+    // --- 1. Add product to the cart ---
+    await test.step(`Add ${quantity} ${name}(s) to the cart`, async () => {
       await store2Page.addProductToCart(id, quantity);
     });
 
-    // --- 2. Hämta totalsummor ---
+    // --- 2. Fetch totals from the page ---
     const { totalSum, totalVAT, grandTotal } = await test.step(
-      'Hämta totalsummor från kundvagnen',
+      'Fetch totals from the cart',
       async () => {
         return await store2Page.getTotals();
       }
     );
 
-    // --- 3. Verifiera att priset i tabellen matchar totalSum ---
-    await test.step(`Verifiera att tabellpriset för ${name} matchar totalSum`, async () => {
+    // --- 3. Verify table price matches totalSum ---
+    await test.step(`Verify table price for ${name} matches totalSum`, async () => {
       const tablePrice = await store2Page.getPriceFromTableByProductId(id);
 
       expectEx(
         totalSum,
-        `totalSum (${totalSum}) borde matcha priset i tabellen (${tablePrice})`
+        `totalSum (${totalSum}) should match the table price (${tablePrice})`
       ).toBeCloseTo(tablePrice, 2);
     });
 
-    // --- 4. Kontroll: VAT = 20% av totalSum 
-    // Rimligt! Alla kunder på The Hoff Store kommer från Armenien eller Bulgarien där 20% moms är standard.
-    // https://www.globalvatcompliance.com/globalvatnews/world-countries-vat-rates-2020/
-    await test.step('Verifiera att totalVAT ≈ 20% av totalSum', async () => {
+    // --- 4. VAT should be 20% of totalSum ---
+    await test.step('Verify that totalVAT ≈ 20% of totalSum', async () => {
       const expectedVAT = totalSum * VAT_RATE;
+
       expectEx(
         totalVAT,
-        `totalVAT (${totalVAT}) borde vara ~${VAT_RATE * 100}% av totalSum (${totalSum})`
+        `totalVAT (${totalVAT}) should be ~${VAT_RATE * 100}% of totalSum (${totalSum})`
       ).toBeCloseTo(expectedVAT, 2);
     });
 
-    // --- 5. Kontroll: grandTotal = totalSum + totalVAT ---
-    await test.step('Verifiera att grandTotal = totalSum + totalVAT', async () => {
+    // --- 5. grandTotal = totalSum + totalVAT ---
+    await test.step('Verify that grandTotal = totalSum + totalVAT', async () => {
       const expectedGrand = totalSum + totalVAT;
+
       expectEx(
         grandTotal,
-        `grandTotal (${grandTotal}) borde vara totalSum + totalVAT (${totalSum} + ${totalVAT})`
+        `grandTotal (${grandTotal}) should equal totalSum + totalVAT (${totalSum} + ${totalVAT})`
       ).toBeCloseTo(expectedGrand, 2);
     });
   });
 }
 
-test('Kompatibilitet med hjälpmedel – struktur och centrala kontroller är åtkomliga', async ({ page, store2Page }) => {
+// --- Accessibility: Assistive technology compatibility ---
+test('Assistive technology compatibility – structure and core controls are accessible', async ({
+  page,
+  store2Page,
+}) => {
 
-  // Kontrollerar att sidans grundstruktur är korrekt och kan förstås av skärmläsare
-  await test.step('Sidans huvudstruktur finns och är åtkomlig för skärmläsare', async () => {
-    await expect(page).toHaveURL(/store2/i); // Bekräftar att vi är på rätt sida
+  // Verifies that page structure is correct and can be interpreted by screen readers
+  await test.step('Page main structure is accessible for assistive technology', async () => {
+    await expect(page).toHaveURL(/store2/i); // Confirm correct page
 
-    const mainRegion = page.getByRole('main'); // Huvudinnehåll för assistive tech
+    const mainRegion = page.getByRole('main'); // Main content landmark for AT tools
     await expect(mainRegion).toBeVisible();
 
-    const heading1 = page.getByRole('heading', { level: 1 }); // Sidan bör ha en huvudrubrik
+    const heading1 = page.getByRole('heading', { level: 1 }); // Page should have a primary heading
     await expect(heading1).toBeVisible();
   });
 
-  // Kontrollerar att de viktigaste kontrollerna är synliga och går att interagera med
-  await test.step('Formulärets interaktiva kontroller är synliga och användbara', async () => {
+  // Verifies that the primary form controls are visible and interactable
+  await test.step('Form controls are visible and usable', async () => {
     const controls = [
-      { locator: store2Page.productSelect, name: 'produktväljaren' },
-      { locator: store2Page.amountInput, name: 'Amount-fältet' },
-      { locator: store2Page.addToCartButton, name: '"Add to cart"-knappen' },
+      { locator: store2Page.productSelect, name: 'product selector' },
+      { locator: store2Page.amountInput, name: 'amount input' },
+      { locator: store2Page.addToCartButton, name: '"Add to cart" button' },
     ];
 
     for (const control of controls) {
-      await expect(control.locator).toBeVisible();   // Elementet kan ses av användaren/hjälpmedel
-      await expect(control.locator).toBeEnabled();   // Elementet går att använda
+      await expect(control.locator).toBeVisible();   // Element is visible to the user/AT
+      await expect(control.locator).toBeEnabled();   // Element can be interacted with
     }
 
-    // Säkerställer att knappen exponeras korrekt som en knapp för hjälpmedel
+    // Ensure "Add to cart" button is correctly exposed as a button
     await expect(store2Page.addToCartButton).toHaveRole('button');
   });
 

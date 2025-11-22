@@ -1,42 +1,49 @@
-import { test, expect } from '@playwright/test';
+import { test as base, expect } from '@playwright/test';
 import { LoginPage } from '../pages/loginPage';
 
-// Testfall: Verifierar att en användare med korrekta uppgifter kan logga in.
-test('consumer can log in successfully', async ({ page }) => {
-  const login = new LoginPage(page);
+// Test data / constants
+const USERNAME = 'Johan';
+const PASSWORD = 'sup3rs3cr3t';
+const ROLE = 'consumer';
 
-  // Steg: Navigera till login-sidan
+// Type for fixtures
+type Fixtures = {
+  loginPage: LoginPage;
+};
+
+// Extend Playwright’s test with a fixture that provides LoginPage
+const test = base.extend<Fixtures>({
+  loginPage: async ({ page }, use) => {
+    const loginPage = new LoginPage(page);
+    await use(loginPage);
+  },
+});
+
+// Test: verifies that a user with correct credentials can log in successfully
+test('user can log in successfully', async ({ page, loginPage }) => {
   await test.step('Navigate to login page', async () => {
-    await login.goto();
+    await loginPage.goto();
   });
 
-  // Steg: Utför inloggning
-  await test.step('Perform login as consumer', async () => {
-    await login.login('markus', 'sup3rs3cr3t', 'consumer');
+  await test.step('Log in with valid credentials', async () => {
+    await loginPage.login(USERNAME, PASSWORD, ROLE);
   });
 
-  // Verifiera att användaren har navigerats till store-sidan
   await test.step('Verify successful login', async () => {
     await expect(page).toHaveURL(/\/store/i);
   });
 });
 
-
-// Testfall: Verifierar att ett felmeddelande visas vid felaktiga användaruppgifter.
-test('shows an error with invalid credentials', async ({ page }) => {
-  const login = new LoginPage(page);
-
-  // Steg: Navigera till login-sidan
+// Test: verifies that an error message is shown when using invalid credentials
+test('displays an error message for invalid credentials', async ({ page, loginPage }) => {
   await test.step('Navigate to login page', async () => {
-    await login.goto();
+    await loginPage.goto();
   });
 
-  // Steg: Försök logga in med ogiltiga uppgifter
   await test.step('Attempt login with invalid credentials', async () => {
-    await login.login('markus', 'wrongpassword', 'consumer');
+    await loginPage.login(USERNAME, 'wrong_password', ROLE);
   });
 
-  // Verifiera felmeddelande
   await test.step('Verify error message is displayed', async () => {
     const errorMessage = page.getByTestId('error-message');
     await expect(errorMessage).toBeVisible();

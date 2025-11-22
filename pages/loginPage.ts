@@ -7,41 +7,39 @@ export class LoginPage {
   readonly roleSelect: Locator;
   readonly loginButton: Locator;
 
-   // Initierar klassen och definierar UI-element på sidan.
+  // Initializes the class and defines the UI elements on the page.
   constructor(page: Page) {
     this.page = page;
 
-    // Fält för användarnamn och lösenord
+    // Username and password fields
     this.username = page.getByRole('textbox', { name: 'Username' });
     this.password = page.getByRole('textbox', { name: 'Password' });
 
-    // Dropdown för rollval
+    // Dropdown for role selection
     this.roleSelect = page.getByLabel('Select Role');
 
-    // Login-knapp
+    // Login button
     this.loginButton = page.getByRole('button', { name: 'Login' });
   }
 
-
-   //Navigerar till login-sidan och verifierar att sidan är redo.   
+  // Navigates to the login page and verifies that the page is ready.
   async goto(): Promise<void> {
     await this.page.goto('https://hoff.is/login/', { waitUntil: 'domcontentloaded' });
 
-    // Säkerställ att sidan laddat korrekt genom att verifiera att username-fältet är synligt
+    // Ensure that the page loaded correctly by verifying that the username field is visible
     await expect(this.username).toBeVisible();
   }
 
-  
-   //Utför login-flödet genom att fylla i användarnamn, lösenord och roll.
+  // Performs the login flow by filling in username, password and selecting a role.
   async login(username: string, password: string, role: string): Promise<void> {
     await this.username.fill(username);
     await this.password.fill(password);
 
-    // Säkerställ att rollalternativet finns innan val
+    // Ensure the role dropdown is enabled before selecting
     await expect(this.roleSelect).toBeEnabled();
     await this.roleSelect.selectOption(role);
 
-    // Klicka på Login-knappen
+    // Click the login button
     await this.loginButton.click();
   }
 }
