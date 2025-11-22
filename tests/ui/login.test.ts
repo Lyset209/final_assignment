@@ -1,5 +1,5 @@
 import { test as base, expect } from '@playwright/test';
-import { LoginPage } from '../pages/loginPage';
+import { LoginPage } from '../../pages/loginPage';
 
 // Read password from environment (GitHub Secret: STORE_PASSWORD)
 const VALID_PASSWORD = process.env.STORE_PASSWORD;
