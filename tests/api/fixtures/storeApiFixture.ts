@@ -1,5 +1,6 @@
 import { test as base, expect, APIRequestContext } from '@playwright/test';
 import { StoreApi } from '../../../api/storeApi';
+import { BASE_URL } from '../../config/testData';
 
 type ApiFixtures = {
   apiRequestContext: APIRequestContext;
@@ -7,23 +8,19 @@ type ApiFixtures = {
 };
 
 export const test = base.extend<ApiFixtures>({
-  // Shared APIRequestContext with base URL set for all API tests
   apiRequestContext: async ({ playwright }, use) => {
-    const requestContext = await playwright.request.newContext({
-      baseURL: 'https://hoff.is',
-    });
+    const ctx = await playwright.request.newContext({ baseURL: BASE_URL });
 
     try {
-      await use(requestContext);
+      await use(ctx);
     } finally {
-      await requestContext.dispose();
+      await ctx.dispose();
     }
   },
 
-  // StoreApi client built on top of the shared request context
   storeApi: async ({ apiRequestContext }, use) => {
-    const storeApi = new StoreApi(apiRequestContext);
-    await use(storeApi);
+    const api = new StoreApi(apiRequestContext);
+    await use(api);
   },
 });
 
