@@ -44,8 +44,6 @@ const test = base.extend<Fixtures>({
   },
 });
 
-// Vi kan fortfarande använda expect från base
-// (inte strikt nödvändigt men tydligt)
 const expectEx = expect;
 
 // Data-drivet test: kör samma logik för varje produkt i productTestCases
@@ -99,32 +97,34 @@ for (const { id, name, quantity } of productTestCases) {
   });
 }
 
-// --- Tillgänglighet: Kompatibilitet med hjälpmedel ---
-test('Kompatibilitet med hjälpmedel – struktur och kontroller är anpassade för skärmläsare', async ({ page, store2Page }) => {
-  await test.step('Sidan är laddad och huvudinnehåll kan hittas', async () => {
-    await expect(page).toHaveURL(/store2/i);
+test('Kompatibilitet med hjälpmedel – struktur och centrala kontroller är åtkomliga', async ({ page, store2Page }) => {
 
-    // Main-landmärke (antingen <main> eller role="main")
-    const mainRegion = page.getByRole('main');
-    await expect(mainRegion, 'Det bör finnas ett main-landmärke för huvudinnehållet').toBeVisible();
+  // Kontrollerar att sidans grundstruktur är korrekt och kan förstås av skärmläsare
+  await test.step('Sidans huvudstruktur finns och är åtkomlig för skärmläsare', async () => {
+    await expect(page).toHaveURL(/store2/i); // Bekräftar att vi är på rätt sida
 
-    // Minst en huvudrubrik (h1)
-    const h1 = page.getByRole('heading', { level: 1 });
-    await expect(h1, 'Sidan bör ha en tydlig huvudrubrik (h1)').toBeVisible();
+    const mainRegion = page.getByRole('main'); // Huvudinnehåll för assistive tech
+    await expect(mainRegion).toBeVisible();
+
+    const heading1 = page.getByRole('heading', { level: 1 }); // Sidan bör ha en huvudrubrik
+    await expect(heading1).toBeVisible();
   });
 
-  await test.step('Formulärets kontroller är synliga, fokusbara och rimligt märkta', async () => {
-    // Produktväljare
-    await expect(store2Page.productSelect, 'Produktväljaren ska vara synlig').toBeVisible();
-    await expect(store2Page.productSelect, 'Produktväljaren ska gå att interagera med').toBeEnabled();
+  // Kontrollerar att de viktigaste kontrollerna är synliga och går att interagera med
+  await test.step('Formulärets interaktiva kontroller är synliga och användbara', async () => {
+    const controls = [
+      { locator: store2Page.productSelect, name: 'produktväljaren' },
+      { locator: store2Page.amountInput, name: 'Amount-fältet' },
+      { locator: store2Page.addToCartButton, name: '"Add to cart"-knappen' },
+    ];
 
-    // Amount-fält
-    await expect(store2Page.amountInput, 'Amount-fältet ska vara synligt').toBeVisible();
-    await expect(store2Page.amountInput, 'Amount-fältet ska gå att interagera med').toBeEnabled();
+    for (const control of controls) {
+      await expect(control.locator).toBeVisible();   // Elementet kan ses av användaren/hjälpmedel
+      await expect(control.locator).toBeEnabled();   // Elementet går att använda
+    }
 
-    // Add to cart-knappen
-    await expect(store2Page.addToCartButton, '"Add to cart"-knappen ska vara synlig').toBeVisible();
-    await expect(store2Page.addToCartButton, '"Add to cart"-knappen ska gå att interagera med').toBeEnabled();
-    await expect(store2Page.addToCartButton, '"Add to cart"-knappen ska exponeras som en knapp').toHaveRole('button');
+    // Säkerställer att knappen exponeras korrekt som en knapp för hjälpmedel
+    await expect(store2Page.addToCartButton).toHaveRole('button');
   });
+
 });
