@@ -1,52 +1,99 @@
 import { test as base, expect } from '@playwright/test';
 import { LoginPage } from '../pages/loginPage';
 
+// Read password from environment (GitHub Secret: STORE_PASSWORD)
+const VALID_PASSWORD = process.env.STORE_PASSWORD;
+if (!VALID_PASSWORD) {
+  throw new Error('STORE_PASSWORD environment variable is not set.');
+}
+
 // Test data / constants
-const USERNAME = 'Johan';
-const PASSWORD = 'sup3rs3cr3t';
+const VALID_USERNAME = 'Johan';
 const ROLE = 'consumer';
 
-// Type for fixtures
-type Fixtures = {
-  loginPage: LoginPage;
+// Types
+type LoginCredentials = {
+  username: string;
+  password: string;
+  role: string;
+  description: string;
+  shouldSucceed: boolean;
 };
 
-// Extend Playwright’s test with a fixture that provides LoginPage
+type Fixtures = {
+  loginPage: LoginPage;
+  loginWith: (credentials: LoginCredentials) => Promise<void>;
+};
+
+// Extend Playwright’s test with fixtures for LoginPage and a login helper
 const test = base.extend<Fixtures>({
   loginPage: async ({ page }, use) => {
     const loginPage = new LoginPage(page);
     await use(loginPage);
   },
+
+  loginWith: async ({ loginPage }, use) => {
+    // Provide a helper function that performs the login flow
+    const fn = async (credentials: LoginCredentials) => {
+      await loginPage.goto();
+      await loginPage.login(credentials.username, credentials.password, credentials.role);
+    };
+
+    await use(fn);
+  },
 });
 
-// Test: verifies that a user with correct credentials can log in successfully
-test('user can log in successfully', async ({ page, loginPage }) => {
-  await test.step('Navigate to login page', async () => {
-    await loginPage.goto();
-  });
+// Data-driven login scenarios
+const loginScenarios: LoginCredentials[] = [
+  {
+    description: 'valid username and valid password',
+    username: VALID_USERNAME,
+    password: VALID_PASSWORD,
+    role: ROLE,
+    shouldSucceed: true,
+  },
+  {
+    description: 'valid username and wrong password',
+    username: VALID_USERNAME,
+    password: 'wrong_password',
+    role: ROLE,
+    shouldSucceed: false,
+  },
+  {
+    description: 'empty password',
+    username: VALID_USERNAME,
+    password: '',
+    role: ROLE,
+    shouldSucceed: false,
+  },
+  {
+    description: 'unknown username with valid password',
+    username: 'unknown_user',
+    password: VALID_PASSWORD,
+    role: ROLE,
+    shouldSucceed: false,
+  },
+];
 
-  await test.step('Log in with valid credentials', async () => {
-    await loginPage.login(USERNAME, PASSWORD, ROLE);
-  });
+// Data-driven tests
+for (const scenario of loginScenarios) {
+  test(`login behavior – ${scenario.description}`, async ({ page, loginWith }) => {
+    await test.step(`Attempt login with: ${scenario.description}`, async () => {
+      await loginWith(scenario);
+    });
 
-  await test.step('Verify successful login', async () => {
-    await expect(page).toHaveURL(/\/store/i);
+    if (scenario.shouldSucceed) {
+      await test.step('Verify successful login', async () => {
+        await expect(page).toHaveURL(/\/store/i);
+      });
+    } else {
+      await test.step('Verify error message is displayed', async () => {
+        const errorMessage = page.getByTestId('error-message');
+        await expect(errorMessage).toBeVisible();
+        await expect(errorMessage).toContainText('Incorrect password');
+        // Optionally: ensure we are still on the login page
+        await expect(page).toHaveURL(/\/login/i);
+      });
+    }
   });
-});
-
-// Test: verifies that an error message is shown when using invalid credentials
-test('displays an error message for invalid credentials', async ({ page, loginPage }) => {
-  await test.step('Navigate to login page', async () => {
-    await loginPage.goto();
-  });
-
-  await test.step('Attempt login with invalid credentials', async () => {
-    await loginPage.login(USERNAME, 'wrong_password', ROLE);
-  });
-
-  await test.step('Verify error message is displayed', async () => {
-    const errorMessage = page.getByTestId('error-message');
-    await expect(errorMessage).toBeVisible();
-    await expect(errorMessage).toContainText('Incorrect password');
-  });
-});
+}
