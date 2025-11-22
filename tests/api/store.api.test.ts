@@ -1,5 +1,5 @@
 import { test, expect, APIRequestContext } from '@playwright/test';
-import { Store2Api } from '../../api/store2Api';
+import { Store2Api } from '../../api/storeApi';
 
 test.describe('Store2 API', () => {
   // APIRequestContext is used to send HTTP requests in tests
