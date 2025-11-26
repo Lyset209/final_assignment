@@ -1,10 +1,32 @@
 import { test, expect } from './fixtures/storeApiFixture';
 import { LoginPage } from '../../pages/loginPage';
 import { StorePage } from '../../pages/storePage';
+import { StoreApi } from '../../api/storeApi';
 import { STORE_PASSWORD } from '../config/env';
-import { TEST_USER } from '../config/testData';
+import { TEST_USER, BASE_URL } from '../config/testData';
 
 const RESPONSE_THRESHOLD_MS = 1000;
+
+// Simple type for the product info we care about
+type ProductInfo = {
+  id: number;
+  name?: string;
+};
+
+// Populated once in beforeAll
+let products: ProductInfo[] = [];
+
+// Fetch product list once before all tests in this file
+test.beforeAll(async ({ playwright }) => {
+  const requestContext = await playwright.request.newContext({ baseURL: BASE_URL });
+
+  try {
+    const storeApi = new StoreApi(requestContext);
+    products = await storeApi.getProductList();
+  } finally {
+    await requestContext.dispose();
+  }
+});
 
 test.describe('Store API', () => {
   test('GET /store2/ responds within acceptable time', async ({ storeApi }) => {
@@ -15,10 +37,10 @@ test.describe('Store API', () => {
   });
 
   test('API prices match UI totals for all products', async ({ page, storeApi }) => {
-    // --- 1. Fetch all available products from the API ---
-    const products = await storeApi.getProductList();
+    // Sanity check that beforeAll actually fetched something
+    expect(products.length, 'Expected at least one product from API').toBeGreaterThan(0);
 
-    // --- 2. Log in via UI and navigate to the store page ---
+    // Log in once and reuse the same StorePage
     const loginPage = new LoginPage(page);
     await loginPage.goto();
     await loginPage.login(TEST_USER.username, STORE_PASSWORD, TEST_USER.role);
@@ -26,68 +48,33 @@ test.describe('Store API', () => {
 
     const storePage = new StorePage(page);
 
-    // Collect mismatches for a final summary
-    const mismatches: {
-      productId: string;
-      productName?: string;
-      apiPrice: number;
-      uiPrice: number;
-    }[] = [];
-
-    // --- 3. For each product: compare API price to UI total for quantity 1 ---
+    // Loop over all products and compare API price with UI total for quantity 1
     for (const product of products) {
       const productId = String(product.id);
-      const productName = product.name;
+      const label = product.name ? `${product.id} (${product.name})` : String(product.id);
 
-      await test.step(
-        `Validate price for product ID ${productId}${productName ? ` (${productName})` : ''}`,
-        async () => {
-          // 3.1 Get price from API
-          const apiPrice = await storeApi.getProductPrice(productId);
+      await test.step(`Validate price for product ${label}`, async () => {
+        // 1. Get price from API
+        const apiPrice = await storeApi.getProductPrice(productId);
 
-          // 3.2 Reset state to a clean store page for each product
-          await storePage.goto();
+        // 2. Reset to a clean store page for each product
+        await storePage.goto();
 
-          // 3.3 Add exactly 1 item of this product in the UI
-          await storePage.addProductToCart(productId, 1);
+        // 3. Add 1 item of this product in the UI
+        await storePage.addProductToCart(productId, 1);
 
-          // 3.4 Read totals from the UI
-          const { totalSum } = await storePage.getTotals();
+        // 4. Read total sum from UI
+        const { totalSum } = await storePage.getTotals();
 
-          // 3.5 Soft-assert: UI total should match API price
-          //   - Soft assertion means the test continues for all products
-          //   - The test will still fail at the end if any soft assertion failed
-          expect.soft(
-            totalSum,
-            `UI total (${totalSum}) should match API price (${apiPrice}) for product ${productId}`
-          ).toBeCloseTo(apiPrice, 2);
-
-          // 3.6 Track mismatches for a summary log
-          const diff = Math.abs(totalSum - apiPrice);
-          const tolerance = 0.01;
-
-          if (diff > tolerance) {
-            mismatches.push({
-              productId,
-              productName,
-              apiPrice,
-              uiPrice: totalSum,
-            });
-          }
-        }
-      );
+        // 5. Soft-assert: UI total should match API price
+        //    - Uses expect.soft so all products are checked, even if some fail.
+        expect.soft(
+          totalSum,
+          `UI total should match API price for product ${label}`
+        ).toBeCloseTo(apiPrice, 2);
+      });
     }
-
-    // --- 4. Final summary / status report ---
-    if (mismatches.length > 0) {
-      console.error('Price mismatches found between API and UI:');
-      for (const m of mismatches) {
-        console.error(
-          `  - Product ${m.productId}${
-            m.productName ? ` (${m.productName})` : ''
-          }: API = ${m.apiPrice}, UI = ${m.uiPrice}`
-        );
-      }
-    }
+    // If any expect.soft failed, Playwright will still mark this test as failed,
+    // but only after all products have been processed.
   });
 });
