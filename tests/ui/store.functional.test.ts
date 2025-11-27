@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures/storeFixture';
 import { VAT_RATE, PRODUCT_TEST_CASES } from '../config/testData';
 
-test.describe('Store – functional behavior', () => {
+test.describe.parallel('Store – functional behavior', () => {
   // One test per product in PRODUCT_TEST_CASES
   PRODUCT_TEST_CASES.forEach(({ id, name, quantity }) => {
     const productId = String(id);
